@@ -1,0 +1,32 @@
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
+#include <unistd.h>
+#define MAX_TEXT 512
+struct message {
+    long msg_type;
+    char text[MAX_TEXT];
+};
+int main() {
+    key_t key = ftok("progfile", 65);
+    int msgid = msgget(key, 0666 | IPC_CREAT);
+    struct message msg;
+    msg.msg_type = 1;
+    strcpy(msg.text, "Type 1: Hello from Process 1!");
+    msgsnd(msgid, &msg, sizeof(msg), 0);
+    msg.msg_type = 2;
+    strcpy(msg.text, "Type 2: Another message from Process 1!");
+    msgsnd(msgid, &msg, sizeof(msg), 0);
+    for (int i = 1; i <= 2; i++) {
+        msgrcv(msgid, &msg, sizeof(msg), i, 0);
+        printf("Process 2: Received message of type %ld: %s\n", msg.msg_type, msg.text);
+    }
+    msgctl(msgid, IPC_RMID, NULL);
+    return 0;
+}
+output:
+Process 2: Received message of type 1: Type 1: Hello from Process 1!
+Process 2: Received message of type 2: Type 2: Another message from Process 1!
